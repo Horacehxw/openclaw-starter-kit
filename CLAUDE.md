@@ -55,7 +55,7 @@ clawdhub list
 - **Self-evolution records**: `.learnings/` — `LEARNINGS.md`, `ERRORS.md`, `FEATURE_REQUESTS.md` with structured templates (status: open/resolved/promoted, priority: P1/P2/P3)
 - **Skills**: `skills/<skill-name>/SKILL.md` — YAML frontmatter + markdown definition. Two built-in: `self-evolution` (learning & improvement) and `daily-snapshot` (config backup)
 - **Patches**: `patches/AGENTS.patch.md`, `patches/TOOLS.patch.md` — appended to default AGENTS.md and TOOLS.md (never modifies existing content)
-- **Scripts**: `scripts/snapshot.sh` (deterministic backup), `scripts/setup-cron.sh` (cron config), `scripts/setup-browser.sh` (optional headless Chromium)
+- **Scripts**: `scripts/snapshot.sh` (deterministic backup), `scripts/setup-cron.sh` (cron config), `scripts/setup-browser.sh` (optional headless Chromium for Linux/WSL2/macOS), `scripts/setup-browser.ps1` (optional headless browser for Windows)
 - **Snapshots**: `snapshots/YYYY-MM-DD/` — daily config backups with CHANGELOG.md, 30-day retention (monthly 1st preserved permanently)
 
 ### Key Design Principles
