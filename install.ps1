@@ -169,8 +169,8 @@ if (Test-Path $learnSrc) {
     Write-OK ".learnings/"
 }
 
-# Scripts — 复制 bash 版脚本 (WSL/Git Bash 可用)
-foreach ($script in @("setup-cron.sh", "snapshot.sh", "setup-browser.sh")) {
+# Scripts — 复制脚本 (bash 版供 WSL/Git Bash，ps1 版供 Windows 原生)
+foreach ($script in @("setup-cron.sh", "snapshot.sh", "setup-browser.sh", "setup-browser.ps1")) {
     $scriptSrc = Join-Path $SourceDir "scripts\$script"
     if (Test-Path $scriptSrc) {
         Copy-Item -Path $scriptSrc -Destination (Join-Path $WorkspacePath "scripts\$script") -Force
@@ -230,44 +230,15 @@ if ($hasOpenClaw) {
         Write-Info "跳过后 Agent 仍可用 web_fetch 读取网页内容。"
         $setupBrowser = Read-Host "是否现在配置 headless 浏览器? [y/N]"
         if ($setupBrowser -eq "y" -or $setupBrowser -eq "Y") {
-            # 检测 Chrome/Edge/Brave
-            $chromiumPath = $null
-            $candidates = @(
-                "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
-                "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
-                "${env:ProgramFiles}\BraveSoftware\Brave-Browser\Application\brave.exe",
-                "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
-            )
-            foreach ($p in $candidates) {
-                if (Test-Path $p) { $chromiumPath = $p; break }
-            }
-            if (-not $chromiumPath) {
-                foreach ($name in @("chrome", "chromium", "brave", "msedge")) {
-                    $found = Get-Command $name -ErrorAction SilentlyContinue
-                    if ($found) { $chromiumPath = $found.Source; break }
-                }
-            }
-            if ($chromiumPath) {
-                & openclaw config set browser.enabled true 2>$null
-                & openclaw config set browser.defaultProfile '"openclaw"' 2>$null
-                & openclaw config set browser.headless true 2>$null
-                & openclaw config set browser.noSandbox true 2>$null
-                Write-OK "headless 浏览器 ($chromiumPath)"
-                # Playwright
-                $pwDir = Join-Path $env:USERPROFILE ".openclaw\node_modules\playwright"
-                if (-not (Test-Path $pwDir)) {
-                    Write-Info "安装 Playwright..."
-                    Push-Location (Join-Path $env:USERPROFILE ".openclaw")
-                    & npm install playwright 2>$null
-                    Pop-Location
-                    if (Test-Path $pwDir) { Write-OK "Playwright 安装完成" }
-                    else { Write-Warn "Playwright 安装失败" }
-                } else { Write-OK "Playwright 已安装" }
+            $browserScript = Join-Path $WorkspacePath "scripts\setup-browser.ps1"
+            if (Test-Path $browserScript) {
+                & powershell -ExecutionPolicy Bypass -File $browserScript
             } else {
-                Write-Warn "未检测到 Chrome/Edge/Brave，请安装后重试"
+                Write-Warn "setup-browser.ps1 未找到，请手动运行"
             }
         } else {
-            Write-Info "跳过。后续可在 WSL 中运行: bash ~/.openclaw/workspace/scripts/setup-browser.sh"
+            Write-Info "跳过。后续可单独运行:"
+            Write-Host "    powershell -ExecutionPolicy Bypass -File `"$WorkspacePath\scripts\setup-browser.ps1`""
         }
 
         # Exec Approvals

@@ -145,7 +145,8 @@ The Agent will follow OpenClaw's default BOOTSTRAP.md to guide you through ident
 | `skills/scan-all-risk-skill/` | Batch Skill risk scanning (daily 01:00 auto-scan) |
 | `scripts/snapshot.sh` | Deterministic snapshot script (file copy/diff/cleanup) |
 | `scripts/setup-cron.sh` | Scheduled task configuration (snapshot/organize/audit) |
-| `scripts/setup-browser.sh` | Optional headless browser installation |
+| `scripts/setup-browser.sh` | Optional headless browser installation (Linux/WSL2/macOS) |
+| `scripts/setup-browser.ps1` | Optional headless browser installation (Windows) |
 | `snapshots/` | Config snapshot storage directory |
 | `memory/` | Daily log directory (not pre-created by default) |
 
@@ -279,6 +280,7 @@ openclaw-starter-kit/
     └── scripts/
         ├── setup-cron.sh
         ├── setup-browser.sh
+        ├── setup-browser.ps1
         └── snapshot.sh
 ```
 
@@ -478,10 +480,16 @@ openclaw cron run --force daily-snapshot
 ### Skipped During Install? Install Separately Later
 
 ```bash
+# Linux / WSL2 / macOS
 bash ~/.openclaw/workspace/scripts/setup-browser.sh
 ```
 
-The script auto-detects/installs Chromium + Playwright, writes config, and restarts the Gateway.
+```powershell
+# Windows PowerShell (no WSL required)
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.openclaw\workspace\scripts\setup-browser.ps1"
+```
+
+The script auto-detects browsers (Chrome/Edge/Brave) + installs Playwright, writes config, and restarts the Gateway.
 
 ### Disable Browser
 

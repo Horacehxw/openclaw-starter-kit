@@ -145,7 +145,8 @@ Agent 会按照 OpenClaw 默认的 BOOTSTRAP.md 引导你完成身份设置（�
 | `skills/scan-all-risk-skill/` | 批量技能风险扫描（每日 01:00 自动执行） |
 | `scripts/snapshot.sh` | 确定性快照脚本（文件复制/diff/清理） |
 | `scripts/setup-cron.sh` | 定时任务配置（快照/整理/巡检） |
-| `scripts/setup-browser.sh` | 可选 headless 浏览器安装 |
+| `scripts/setup-browser.sh` | 可选 headless 浏览器安装（Linux/WSL2/macOS） |
+| `scripts/setup-browser.ps1` | 可选 headless 浏览器安装（Windows） |
 | `snapshots/` | 配置快照存储目录 |
 | `memory/` | daily log 目录（默认不预创建） |
 
@@ -279,6 +280,7 @@ openclaw-starter-kit/
     └── scripts/
         ├── setup-cron.sh
         ├── setup-browser.sh
+        ├── setup-browser.ps1
         └── snapshot.sh
 ```
 
@@ -478,10 +480,16 @@ openclaw cron run --force daily-snapshot
 ### 安装时跳过了？后续单独安装
 
 ```bash
+# Linux / WSL2 / macOS
 bash ~/.openclaw/workspace/scripts/setup-browser.sh
 ```
 
-脚本会自动检测/安装 Chromium + Playwright，写入配置并重启 Gateway。
+```powershell
+# Windows PowerShell（无需 WSL）
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.openclaw\workspace\scripts\setup-browser.ps1"
+```
+
+脚本会自动检测浏览器（Chrome/Edge/Brave）+ 安装 Playwright，写入配置并重启 Gateway。
 
 ### 关闭浏览器
 
