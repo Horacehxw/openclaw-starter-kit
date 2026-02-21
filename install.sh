@@ -158,7 +158,7 @@ done
 # Skills
 if [ -d "$SOURCE_DIR/skills" ]; then
     cp -r "$SOURCE_DIR/skills/"* "$WORKSPACE/skills/" 2>/dev/null
-    ok "skills/ (self-evolution, daily-snapshot)"
+    ok "skills/ (self-evolution, daily-snapshot, risk-skill-scanner, scan-all-risk-skill)"
 fi
 
 # .learnings

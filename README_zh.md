@@ -8,9 +8,10 @@
 
 - **记忆可靠性** — 预创建 `MEMORY.md` 和 `memory/` 目录（默认不创建，导致很多用户的 Agent 不写长期记忆）
 - **启动检查清单** — 新建 `BOOT.md`（默认不存在）
-- **自主进化** — `.learnings/` 学习记录 + 2 个自定义 Skill（self-evolution、daily-snapshot）
+- **自主进化** — `.learnings/` 学习记录 + 4 个自定义 Skill（self-evolution、daily-snapshot、risk-skill-scanner、scan-all-risk-skill）
 - **配置版本管理** — 每日快照脚本 + cron 任务 + 30 天回滚
 - **安全加固** — exec-approvals 白名单 + `tools.profile = full`
+- **技能风险扫描** — 6 维度安全扫描 + 每日 01:00 自动扫描 + HEARTBEAT CRITICAL 警告
 - **网页浏览** — 可选 headless Chromium（默认只有纯 HTTP 的 `web_fetch`）
 
 安装策略：只在 AGENTS.md 和 TOOLS.md 末尾**追加**少量扩展段落（指向新功能），其余全部是新建文件和目录。不修改 SOUL.md、IDENTITY.md、USER.md、HEARTBEAT.md、BOOTSTRAP.md。
@@ -125,7 +126,7 @@ Agent 会按照 OpenClaw 默认的 BOOTSTRAP.md 引导你完成身份设置（�
 
 **AGENTS.md** ← 追加 ~700B：学习记录（`.learnings/` 目录说明）、配置快照（`snapshots/` 目录 + daily-snapshot Skill）、Skill 获取（ClawdHub 搜索/安装流程）。
 
-**TOOLS.md** ← 追加 ~500B：已安装 Skills 列表（self-evolution、daily-snapshot）、ClawdHub CLI 速查。
+**TOOLS.md** ← 追加 ~500B：已安装 Skills 列表（self-evolution、daily-snapshot、risk-skill-scanner、scan-all-risk-skill）、ClawdHub CLI 速查。
 
 ### 新建文件（默认不存在）
 
@@ -140,6 +141,8 @@ Agent 会按照 OpenClaw 默认的 BOOTSTRAP.md 引导你完成身份设置（�
 | `.learnings/` | LEARNINGS.md + ERRORS.md + FEATURE_REQUESTS.md |
 | `skills/self-evolution/` | 自主学习与改进驱动 |
 | `skills/daily-snapshot/` | 每日配置快照 + 版本回滚 |
+| `skills/risk-skill-scanner/` | 单个技能风险扫描（6 维度安全检测） |
+| `skills/scan-all-risk-skill/` | 批量技能风险扫描（每日 01:00 自动执行） |
 | `scripts/snapshot.sh` | 确定性快照脚本（文件复制/diff/清理） |
 | `scripts/setup-cron.sh` | 定时任务配置（快照/整理/巡检） |
 | `scripts/setup-browser.sh` | 可选 headless 浏览器安装 |
@@ -197,6 +200,7 @@ openclaw context detail
 1. **API Key**：存放在 `~/.openclaw/.env`，设置权限 `chmod 600`（Linux/macOS）
 2. **群聊**：SOUL.md 已配置群聊行为限制
 3. **Skill 审查**：安装新 Skill 前 Agent 会征求确认
+7. **风险扫描**：每日 01:00 自动扫描所有已安装 Skill；CRITICAL 风险触发 HEARTBEAT 警告
 4. **快照备份**：建议 snapshots/ 目录用 git 管理或定期 rsync
 5. **记忆隐私**：MEMORY.md 只在私聊 session 加载
 6. **兼容检查**：安装后运行 `openclaw doctor` 确认无异常
@@ -241,7 +245,7 @@ A: 用 `openclaw context detail` 检查。单文件超 20,000 字符会被截断
 
 ---
 
-_配置包版本: v1.6.0 | 最后更新: 2026-02-21_
+_配置包版本: v1.7.0 | 最后更新: 2026-02-22_
 _支持平台: Linux / WSL2 / macOS / Windows_
 _基于 OpenClaw 社区最佳实践整合，参考了 ClawdHub、self-improving-agent 等开源项目。_
 
@@ -269,7 +273,9 @@ openclaw-starter-kit/
     │   └── FEATURE_REQUESTS.md
     ├── skills/
     │   ├── self-evolution/SKILL.md
-    │   └── daily-snapshot/SKILL.md
+    │   ├── daily-snapshot/SKILL.md
+    │   ├── risk-skill-scanner/SKILL.md
+    │   └── scan-all-risk-skill/SKILL.md
     └── scripts/
         ├── setup-cron.sh
         ├── setup-browser.sh
@@ -436,10 +442,11 @@ openclaw gateway restart
 
 ## 附录 D：定时任务详解
 
-安装脚本 Step 7 可选配置三个定时任务（OpenClaw 内置 cron）：
+安装脚本 Step 7 可选配置四个定时任务（OpenClaw 内置 cron）：
 
 | 任务 | 时间 | 功能 |
 |------|------|------|
+| `daily-risk-scan` | 每天 01:00 | 扫描所有已安装 Skill 的安全风险；CRITICAL 发现触发 HEARTBEAT 警告 |
 | `daily-snapshot` | 每天 02:00 | 运行 `snapshot.sh` 备份配置 + 生成 CHANGELOG |
 | `daily-memory-review` | 每天 23:00 | 整理今日记忆，更新 MEMORY.md |
 | `weekly-skill-review` | 每周日 10:00 | 更新已安装 Skill，搜索新能力 |
@@ -451,6 +458,7 @@ openclaw gateway restart
 bash ~/.openclaw/workspace/scripts/setup-cron.sh
 
 # Windows PowerShell
+openclaw cron add --name "daily-risk-scan" --cron "0 1 * * *" --session isolated --message "执行每日技能风险扫描，CRITICAL 发现写入 HEARTBEAT.md"
 openclaw cron add --name "daily-snapshot" --cron "0 2 * * *" --session isolated --message "运行 bash scripts/snapshot.sh 然后阅读 CHANGELOG.md 追加总结"
 openclaw cron add --name "daily-memory-review" --cron "0 23 * * *" --session isolated --message "执行每日记忆整理"
 openclaw cron add --name "weekly-skill-review" --cron "0 10 * * 0" --session isolated --message "执行每周 Skill 巡检"

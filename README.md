@@ -8,9 +8,10 @@ An incremental extension pack on top of `openclaw onboard` defaults. The default
 
 - **Memory Reliability** — Pre-creates `MEMORY.md` and `memory/` directory (not created by default, causing many users' Agents to never write long-term memory)
 - **Startup Checklist** — Creates `BOOT.md` (does not exist by default)
-- **Self-Evolution** — `.learnings/` records + 2 custom Skills (self-evolution, daily-snapshot)
+- **Self-Evolution** — `.learnings/` records + 4 custom Skills (self-evolution, daily-snapshot, risk-skill-scanner, scan-all-risk-skill)
 - **Config Version Control** — Daily snapshot script + cron tasks + 30-day rollback
 - **Security Hardening** — exec-approvals allowlist + `tools.profile = full`
+- **Skill Risk Scanning** — 6-dimension security scan + daily 01:00 auto-scan + HEARTBEAT CRITICAL alerts
 - **Web Browsing** — Optional headless Chromium (default only has plain HTTP `web_fetch`)
 
 Installation strategy: Only **appends** small extension paragraphs to the end of AGENTS.md and TOOLS.md (pointing to new features). Everything else is new files and directories. Does not modify SOUL.md, IDENTITY.md, USER.md, HEARTBEAT.md, or BOOTSTRAP.md.
@@ -125,7 +126,7 @@ The Agent will follow OpenClaw's default BOOTSTRAP.md to guide you through ident
 
 **AGENTS.md** ← Appends ~700B: learning records (`.learnings/` directory description), config snapshots (`snapshots/` directory + daily-snapshot Skill), Skill acquisition (ClawdHub search/install workflow).
 
-**TOOLS.md** ← Appends ~500B: installed Skills list (self-evolution, daily-snapshot), ClawdHub CLI quick reference.
+**TOOLS.md** ← Appends ~500B: installed Skills list (self-evolution, daily-snapshot, risk-skill-scanner, scan-all-risk-skill), ClawdHub CLI quick reference.
 
 ### New Files (Don't Exist by Default)
 
@@ -140,6 +141,8 @@ The Agent will follow OpenClaw's default BOOTSTRAP.md to guide you through ident
 | `.learnings/` | LEARNINGS.md + ERRORS.md + FEATURE_REQUESTS.md |
 | `skills/self-evolution/` | Self-directed learning and improvement |
 | `skills/daily-snapshot/` | Daily config snapshots + version rollback |
+| `skills/risk-skill-scanner/` | Single Skill security audit (6-dimension inspection) |
+| `skills/scan-all-risk-skill/` | Batch Skill risk scanning (daily 01:00 auto-scan) |
 | `scripts/snapshot.sh` | Deterministic snapshot script (file copy/diff/cleanup) |
 | `scripts/setup-cron.sh` | Scheduled task configuration (snapshot/organize/audit) |
 | `scripts/setup-browser.sh` | Optional headless browser installation |
@@ -197,6 +200,7 @@ openclaw context detail
 1. **API Key**: Store in `~/.openclaw/.env`, set permissions with `chmod 600` (Linux/macOS)
 2. **Group Chat**: SOUL.md already configures group chat behavior restrictions
 3. **Skill Review**: Agent will ask for confirmation before installing new Skills
+7. **Risk Scanning**: Daily automatic scanning of all installed Skills at 01:00; CRITICAL risks trigger HEARTBEAT alerts
 4. **Snapshot Backup**: Consider managing the snapshots/ directory with git or periodic rsync
 5. **Memory Privacy**: MEMORY.md is only loaded in private chat sessions
 6. **Compatibility Check**: Run `openclaw doctor` after installation to confirm no issues
@@ -241,7 +245,7 @@ A: Check with `openclaw context detail`. Files exceeding 20,000 characters will 
 
 ---
 
-_Pack version: v1.6.0 | Last updated: 2026-02-21_
+_Pack version: v1.7.0 | Last updated: 2026-02-22_
 _Supported platforms: Linux / WSL2 / macOS / Windows_
 _Based on OpenClaw community best practices, referencing ClawdHub, self-improving-agent, and other open-source projects._
 
@@ -269,7 +273,9 @@ openclaw-starter-kit/
     │   └── FEATURE_REQUESTS.md
     ├── skills/
     │   ├── self-evolution/SKILL.md
-    │   └── daily-snapshot/SKILL.md
+    │   ├── daily-snapshot/SKILL.md
+    │   ├── risk-skill-scanner/SKILL.md
+    │   └── scan-all-risk-skill/SKILL.md
     └── scripts/
         ├── setup-cron.sh
         ├── setup-browser.sh
@@ -436,10 +442,11 @@ To enable/disable/install later, see [Appendix E](#appendix-e-headless-browser-m
 
 ## Appendix D: Scheduled Tasks
 
-Install script Step 7 optionally configures three scheduled tasks (OpenClaw built-in cron):
+Install script Step 7 optionally configures four scheduled tasks (OpenClaw built-in cron):
 
 | Task | Schedule | Function |
 |------|----------|----------|
+| `daily-risk-scan` | Daily 01:00 | Scans all installed Skills for security risks; CRITICAL findings trigger HEARTBEAT alerts |
 | `daily-snapshot` | Daily 02:00 | Runs `snapshot.sh` to backup config + generate CHANGELOG |
 | `daily-memory-review` | Daily 23:00 | Organizes today's memory, updates MEMORY.md |
 | `weekly-skill-review` | Weekly Sunday 10:00 | Updates installed Skills, searches for new capabilities |
@@ -451,6 +458,7 @@ Install script Step 7 optionally configures three scheduled tasks (OpenClaw buil
 bash ~/.openclaw/workspace/scripts/setup-cron.sh
 
 # Windows PowerShell
+openclaw cron add --name "daily-risk-scan" --cron "0 1 * * *" --session isolated --message "Execute daily Skill risk scan, write CRITICAL findings to HEARTBEAT.md"
 openclaw cron add --name "daily-snapshot" --cron "0 2 * * *" --session isolated --message "Run bash scripts/snapshot.sh then read CHANGELOG.md and append summary"
 openclaw cron add --name "daily-memory-review" --cron "0 23 * * *" --session isolated --message "Execute daily memory organization"
 openclaw cron add --name "weekly-skill-review" --cron "0 10 * * 0" --session isolated --message "Execute weekly Skill audit"

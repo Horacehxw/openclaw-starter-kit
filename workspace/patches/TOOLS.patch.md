@@ -9,6 +9,8 @@
 |-------|------|
 | self-evolution | 自主学习与改进（`.learnings/` 记录） |
 | daily-snapshot | 每日配置快照（`snapshots/` 目录） |
+| risk-skill-scanner | 单个技能风险扫描（6 维度安全检测） |
+| scan-all-risk-skill | 批量技能风险扫描（每日 01:00 自动执行） |
 
 ## ClawdHub CLI
 

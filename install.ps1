@@ -159,7 +159,7 @@ foreach ($nf in @("BOOT.md", "MEMORY.md")) {
 $skillsSrc = Join-Path $SourceDir "skills"
 if (Test-Path $skillsSrc) {
     Copy-Item -Path "$skillsSrc\*" -Destination (Join-Path $WorkspacePath "skills") -Recurse -Force
-    Write-OK "skills/ (self-evolution, daily-snapshot)"
+    Write-OK "skills/ (self-evolution, daily-snapshot, risk-skill-scanner, scan-all-risk-skill)"
 }
 
 # .learnings
@@ -305,6 +305,8 @@ if ($hasOpenClaw) {
     if ($gwOk) {
         $setupCron = Read-Host "是否现在配置定时任务? [y/N]"
         if ($setupCron -eq "y" -or $setupCron -eq "Y") {
+            Write-Info "配置每日风险扫描 (凌晨 1:00)..."
+            & openclaw cron add --name "daily-risk-scan" --cron "0 1 * * *" --session isolated --message "执行每日技能风险扫描：1) 按照 scan-all-risk-skill 的指引，扫描 skills/ 下所有已安装 Skill 2) 分析扫描结果，如发现 CRITICAL 风险则检查 HEARTBEAT.md 是否已有该 Skill 的待确认警告，如无则追加警告块（格式见 AGENTS.md 风险扫描章节），并记录到 .learnings/ERRORS.md 3) 如发现 HIGH 风险记录到 daily log 建议用户复查 4) 将扫描汇总写入今日 daily log" 2>$null
             Write-Info "配置每日快照 (凌晨 2:00)..."
             & openclaw cron add --name "daily-snapshot" --cron "0 2 * * *" --session isolated --message "运行配置快照脚本: bash scripts/snapshot.sh 然后阅读 CHANGELOG.md 追加总结" 2>$null
             Write-Info "配置每日记忆整理 (23:00)..."
