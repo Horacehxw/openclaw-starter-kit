@@ -386,7 +386,7 @@ if (Test-Path $learnSrc) {
 }
 
 # Scripts — 复制脚本 (bash 版供 WSL/Git Bash，ps1 版供 Windows 原生)
-foreach ($script in @("setup-cron.sh", "snapshot.sh", "setup-browser.sh", "setup-browser.ps1")) {
+foreach ($script in @("setup-cron.sh", "snapshot.sh", "snapshot.ps1", "setup-browser.sh", "setup-browser.ps1")) {
     $scriptSrc = Join-Path $SourceDir "scripts\$script"
     if (Test-Path $scriptSrc) {
         Copy-Item -Path $scriptSrc -Destination (Join-Path $WorkspacePath "scripts\$script") -Force
@@ -501,7 +501,7 @@ if ($hasOpenClaw) {
             Write-Info "配置每日风险扫描 (凌晨 1:00)..."
             & openclaw cron add --name "daily-risk-scan" --cron "0 1 * * *" --session isolated --message "执行每日技能风险扫描：1) 按照 scan-all-risk-skill 的指引，扫描 skills/ 下所有已安装 Skill 2) 分析扫描结果，如发现 CRITICAL 风险则检查 HEARTBEAT.md 是否已有该 Skill 的待确认警告，如无则追加警告块（格式见 AGENTS.md 风险扫描章节），并记录到 .learnings/ERRORS.md 3) 如发现 HIGH 风险记录到 daily log 建议用户复查 4) 将扫描汇总写入今日 daily log" 2>$null
             Write-Info "配置每日快照 (凌晨 2:00)..."
-            & openclaw cron add --name "daily-snapshot" --cron "0 2 * * *" --session isolated --message "运行配置快照脚本: bash scripts/snapshot.sh 然后阅读 CHANGELOG.md 追加总结" 2>$null
+            & openclaw cron add --name "daily-snapshot" --cron "0 2 * * *" --session isolated --message "运行配置快照脚本: powershell -ExecutionPolicy Bypass -File scripts/snapshot.ps1 然后阅读 CHANGELOG.md 追加总结" 2>$null
             Write-Info "配置每日记忆整理 (23:00)..."
             & openclaw cron add --name "daily-memory-review" --cron "0 23 * * *" --session isolated --message "执行每日记忆整理和自省" 2>$null
             Write-Info "配置每周 Skill 巡检 (周日 10:00)..."

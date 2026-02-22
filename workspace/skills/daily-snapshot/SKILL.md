@@ -1,25 +1,28 @@
 ---
 name: daily-snapshot
-description: "每日配置快照：确定性 bash 脚本处理文件复制/删除，Agent 负责生成描述性总结"
+description: "每日配置快照：确定性脚本处理文件复制/删除，Agent 负责生成描述性总结"
 metadata:
   openclaw:
     emoji: "📸"
     requires:
-      bins: ["bash", "diff", "date"]
+      bins_any: [["bash", "diff", "date"], ["powershell"]]
 ---
 
 # Daily Snapshot — 每日配置快照
 
 ## 设计原则
 
-文件复制、diff、清理等操作由 `scripts/snapshot.sh` **确定性执行**，不依赖 LLM 判断。
+文件复制、diff、清理等操作由快照脚本**确定性执行**，不依赖 LLM 判断。
 Agent 的职责仅限于：触发脚本 → 阅读 CHANGELOG → 追加描述性总结。
 
 ## 快照脚本
 
-位置: `scripts/snapshot.sh`
+| 平台 | 脚本 |
+|------|------|
+| Linux / WSL2 / macOS | `scripts/snapshot.sh` |
+| Windows (PowerShell) | `scripts/snapshot.ps1` |
 
-脚本自动完成：
+两个脚本功能完全对等，自动完成：
 1. 创建 `snapshots/YYYY-MM-DD/` 目录
 2. 复制 9 个核心 .md 文件 + `skills/` + `.learnings/`
 3. 与上一次快照做 diff，统计变更行数
@@ -42,8 +45,9 @@ Agent 的职责仅限于：触发脚本 → 阅读 CHANGELOG → 追加描述性
 ### 执行流程
 
 ```
-1. 运行脚本:
-   bash ~/. openclaw/workspace/scripts/snapshot.sh
+1. 运行脚本（根据平台选择）:
+   Linux/WSL/macOS:  bash ~/.openclaw/workspace/scripts/snapshot.sh
+   Windows:          powershell -ExecutionPolicy Bypass -File ~/.openclaw/workspace/scripts/snapshot.ps1
 
 2. 阅读生成的 CHANGELOG.md:
    cat snapshots/YYYY-MM-DD/CHANGELOG.md
