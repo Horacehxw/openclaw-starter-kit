@@ -372,7 +372,7 @@ if [ -d "$SOURCE_DIR/.learnings" ]; then
 fi
 
 # Scripts
-for script in setup-cron.sh snapshot.sh setup-browser.sh setup-browser.ps1; do
+for script in setup-cron.sh snapshot.sh snapshot.ps1 setup-browser.sh setup-browser.ps1; do
     if [ -f "$SOURCE_DIR/scripts/$script" ]; then
         cp "$SOURCE_DIR/scripts/$script" "$WORKSPACE/scripts/$script"
         chmod +x "$WORKSPACE/scripts/$script"

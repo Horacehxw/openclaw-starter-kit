@@ -386,7 +386,7 @@ if (Test-Path $learnSrc) {
 }
 
 # Scripts — 复制脚本 (bash 版供 WSL/Git Bash，ps1 版供 Windows 原生)
-foreach ($script in @("setup-cron.sh", "snapshot.sh", "setup-browser.sh", "setup-browser.ps1")) {
+foreach ($script in @("setup-cron.sh", "snapshot.sh", "snapshot.ps1", "setup-browser.sh", "setup-browser.ps1")) {
     $scriptSrc = Join-Path $SourceDir "scripts\$script"
     if (Test-Path $scriptSrc) {
         Copy-Item -Path $scriptSrc -Destination (Join-Path $WorkspacePath "scripts\$script") -Force
@@ -499,7 +499,7 @@ if ($hasOpenClaw) {
         $setupCron = Read-Host "是否现在配置定时任务? [y/N]"
         if ($setupCron -eq "y" -or $setupCron -eq "Y") {
             Write-Info "配置每日快照 (凌晨 2:00)..."
-            & openclaw cron add --name "daily-snapshot" --cron "0 2 * * *" --session isolated --message "运行配置快照脚本: bash scripts/snapshot.sh 然后阅读 CHANGELOG.md 追加总结" 2>$null
+            & openclaw cron add --name "daily-snapshot" --cron "0 2 * * *" --session isolated --message "运行配置快照脚本: powershell -ExecutionPolicy Bypass -File scripts/snapshot.ps1 然后阅读 CHANGELOG.md 追加总结" 2>$null
             Write-Info "配置每日记忆整理 (23:00)..."
             & openclaw cron add --name "daily-memory-review" --cron "0 23 * * *" --session isolated --message "执行每日记忆整理和自省" 2>$null
             Write-Info "配置每周 Skill 巡检 (周日 10:00)..."
