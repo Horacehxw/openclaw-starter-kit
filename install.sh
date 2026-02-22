@@ -49,7 +49,7 @@ SOURCE_DIR="$SCRIPT_DIR/workspace"
 info "目标工作区: $WORKSPACE"
 
 # ── 前置检查 ──────────────────────────────────────────────────
-header "📋 Step 1/7 — 前置检查"
+header "📋 Step 1/8 — 前置检查"
 
 # Node.js
 if command -v node &>/dev/null; then
@@ -103,8 +103,138 @@ else
     warn "Git 未安装 (可选，推荐用于快照版本管理)"
 fi
 
+# ── OpenClaw Onboard 环境引导 ──────────────────────────────────
+header "🚀 Step 2/8 — OpenClaw 环境引导"
+
+ONBOARD_NEEDED=false
+if [ -f "$WORKSPACE/SOUL.md" ] && [ -f "$WORKSPACE/IDENTITY.md" ]; then
+    ok "检测到已完成 onboard（SOUL.md、IDENTITY.md 存在）"
+else
+    ONBOARD_NEEDED=true
+    if ! command -v openclaw &>/dev/null; then
+        warn "OpenClaw CLI 未安装，无法执行 onboard"
+        warn "请先安装 OpenClaw 后重新运行本脚本"
+        warn "继续安装 Starter Kit 文件（onboard 部分跳过）..."
+        ONBOARD_NEEDED=false
+    fi
+fi
+
+if [ "$ONBOARD_NEEDED" = true ]; then
+    info "未检测到 OpenClaw 工作区（缺少 SOUL.md / IDENTITY.md）"
+    info "需要先完成 OpenClaw 初始化 (onboard)"
+    echo ""
+
+    # --- API 提供商选择 ---
+    echo "  请选择 API 提供商:"
+    echo "    [1] Anthropic (官方 Claude API)"
+    echo "    [2] 自定义 API 端点 (OpenRouter、Azure 等)"
+    echo "    [3] Z.AI"
+    echo ""
+    read -p "  请输入选项 [1]: " auth_choice
+    auth_choice="${auth_choice:-1}"
+
+    ONBOARD_AUTH_ARGS=""
+    case "$auth_choice" in
+        1)
+            # Anthropic 官方
+            ONBOARD_AUTH_ARGS="--auth-choice apiKey"
+            echo ""
+            read -sp "  请输入 Anthropic API Key: " api_key
+            echo ""
+            if [ -z "$api_key" ]; then
+                fail "API Key 不能为空"
+                exit 1
+            fi
+            ONBOARD_AUTH_ARGS="$ONBOARD_AUTH_ARGS --anthropic-api-key $api_key"
+            ;;
+        2)
+            # 自定义端点
+            ONBOARD_AUTH_ARGS="--auth-choice custom-api-key"
+            echo ""
+            read -p "  请输入 API Base URL (例: https://openrouter.ai/api/v1): " custom_url
+            if [ -z "$custom_url" ]; then
+                fail "API Base URL 不能为空"
+                exit 1
+            fi
+            read -sp "  请输入 API Key: " api_key
+            echo ""
+            if [ -z "$api_key" ]; then
+                fail "API Key 不能为空"
+                exit 1
+            fi
+            read -p "  请输入模型 ID [claude-sonnet-4-6]: " custom_model
+            custom_model="${custom_model:-claude-sonnet-4-6}"
+            read -p "  API 兼容类型 [openai]: " custom_compat
+            custom_compat="${custom_compat:-openai}"
+            ONBOARD_AUTH_ARGS="$ONBOARD_AUTH_ARGS --custom-base-url $custom_url --custom-api-key $api_key --custom-model-id $custom_model --custom-compatibility $custom_compat"
+            ;;
+        3)
+            # Z.AI
+            ONBOARD_AUTH_ARGS="--auth-choice zai-api-key"
+            echo ""
+            read -sp "  请输入 Z.AI API Key: " api_key
+            echo ""
+            if [ -z "$api_key" ]; then
+                fail "API Key 不能为空"
+                exit 1
+            fi
+            ONBOARD_AUTH_ARGS="$ONBOARD_AUTH_ARGS --zai-api-key $api_key"
+            ;;
+        *)
+            fail "无效选项: $auth_choice"
+            exit 1
+            ;;
+    esac
+
+    # --- 安装为系统服务 ---
+    echo ""
+    read -p "  是否将 Gateway 安装为系统服务 (开机自启)? [Y/n] " install_daemon
+    DAEMON_FLAG=""
+    if [[ "$install_daemon" != "n" && "$install_daemon" != "N" ]]; then
+        DAEMON_FLAG="--install-daemon"
+    fi
+
+    # --- 执行 onboard ---
+    echo ""
+    info "正在执行 OpenClaw 初始化..."
+    info "（跳过消息渠道配对和技能安装，可稍后通过 openclaw onboard 补充配置）"
+    echo ""
+
+    # shellcheck disable=SC2086
+    openclaw onboard \
+        --non-interactive \
+        --flow quickstart \
+        $ONBOARD_AUTH_ARGS \
+        --skip-channels \
+        --skip-skills \
+        --accept-risk \
+        $DAEMON_FLAG \
+        --workspace "$WORKSPACE" \
+    && {
+        ok "OpenClaw 初始化完成"
+    } || {
+        fail "OpenClaw 初始化失败"
+        echo ""
+        echo "  可能原因:"
+        echo "    · API Key 无效或过期"
+        echo "    · 网络连接问题"
+        echo "    · OpenClaw CLI 版本过旧 (尝试: npm update -g openclaw)"
+        echo ""
+        echo "  你可以手动执行: openclaw onboard"
+        echo "  完成后重新运行本安装脚本"
+        exit 1
+    }
+
+    # 验证 onboard 成功
+    if [ -f "$WORKSPACE/SOUL.md" ]; then
+        ok "工作区文件验证通过 (SOUL.md 已创建)"
+    else
+        warn "onboard 已执行但未检测到 SOUL.md，可能需要手动检查"
+    fi
+fi
+
 # ── 备份已有工作区 ────────────────────────────────────────────
-header "📦 Step 2/7 — 备份检查"
+header "📦 Step 3/8 — 备份检查"
 
 if [ -d "$WORKSPACE" ] && [ "$(ls -A "$WORKSPACE" 2>/dev/null)" ]; then
     BACKUP="${WORKSPACE}.backup.$(date +%Y%m%d%H%M%S)"
@@ -116,13 +246,13 @@ else
 fi
 
 # ── 创建目录结构 ──────────────────────────────────────────────
-header "📁 Step 3/7 — 创建目录结构"
+header "📁 Step 4/8 — 创建目录结构"
 
 mkdir -p "$WORKSPACE"/{memory,skills,snapshots,.learnings,scripts}
 ok "目录结构就绪"
 
 # ── 复制配置文件 ──────────────────────────────────────────────
-header "📝 Step 4/7 — 复制配置文件"
+header "📝 Step 5/8 — 复制配置文件"
 
 # --- 策略 1: 追加补丁（保留 OpenClaw 默认内容，追加扩展）---
 for patchfile in AGENTS TOOLS; do
@@ -190,7 +320,7 @@ EOF
 fi
 
 # ── 安装 ClawdHub CLI ─────────────────────────────────────────
-header "🔧 Step 5/7 — ClawdHub CLI"
+header "🔧 Step 6/8 — ClawdHub CLI"
 
 if command -v clawdhub &>/dev/null; then
     ok "ClawdHub CLI 已安装"
@@ -201,7 +331,7 @@ else
 fi
 
 # ── 工具权限配置 ──────────────────────────────────────────────
-header "🔑 Step 6/7 — 工具权限"
+header "🔑 Step 7/8 — 工具权限"
 
 if command -v openclaw &>/dev/null; then
     read -p "是否配置工具权限（推荐首次使用）? [Y/n] " setup_tools
@@ -287,7 +417,7 @@ else
 fi
 
 # ── 配置定时任务 ──────────────────────────────────────────────
-header "⏰ Step 7/7 — 定时任务"
+header "⏰ Step 8/8 — 定时任务"
 
 if command -v openclaw &>/dev/null; then
     # 检查 Gateway 是否在运行且已配对

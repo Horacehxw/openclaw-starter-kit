@@ -18,7 +18,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 [-WorkspacePath "D:\my-agen
 
 Default install target: `~/.openclaw/workspace/`
 
-The installer runs 7 steps: prerequisite check → backup existing workspace → create directories → copy files & apply patches → install ClawdHub CLI → configure tool permissions → optional cron & browser setup.
+The installer runs 8 steps: prerequisite check → OpenClaw onboard automation (if not yet completed) → backup existing workspace → create directories → copy files & apply patches → install ClawdHub CLI → configure tool permissions → optional cron & browser setup.
 
 ## Key Commands
 

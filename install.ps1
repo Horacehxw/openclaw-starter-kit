@@ -37,7 +37,7 @@ $SourceDir = Join-Path $ScriptDir "workspace"
 Write-Info "目标工作区: $WorkspacePath"
 
 # ── 前置检查 ──────────────────────────────────────────────────
-Write-Head "📋 Step 1/7 — 前置检查"
+Write-Head "📋 Step 1/8 — 前置检查"
 
 # Node.js
 try {
@@ -91,8 +91,149 @@ try {
     Write-Warn "Git 未安装 (可选，推荐用于快照版本管理)"
 }
 
+# ── OpenClaw Onboard 环境引导 ──────────────────────────────────
+Write-Head "🚀 Step 2/8 — OpenClaw 环境引导"
+
+$onboardNeeded = $false
+$soulFile = Join-Path $WorkspacePath "SOUL.md"
+$identityFile = Join-Path $WorkspacePath "IDENTITY.md"
+
+if ((Test-Path $soulFile) -and (Test-Path $identityFile)) {
+    Write-OK "检测到已完成 onboard（SOUL.md、IDENTITY.md 存在）"
+} else {
+    $onboardNeeded = $true
+    if (-not $hasOpenClaw) {
+        Write-Warn "OpenClaw CLI 未安装，无法执行 onboard"
+        Write-Warn "请先安装 OpenClaw 后重新运行本脚本"
+        Write-Warn "继续安装 Starter Kit 文件（onboard 部分跳过）..."
+        $onboardNeeded = $false
+    }
+}
+
+if ($onboardNeeded) {
+    Write-Info "未检测到 OpenClaw 工作区（缺少 SOUL.md / IDENTITY.md）"
+    Write-Info "需要先完成 OpenClaw 初始化 (onboard)"
+    Write-Host ""
+
+    # --- API 提供商选择 ---
+    Write-Host "  请选择 API 提供商:"
+    Write-Host "    [1] Anthropic (官方 Claude API)"
+    Write-Host "    [2] 自定义 API 端点 (OpenRouter、Azure 等)"
+    Write-Host "    [3] Z.AI"
+    Write-Host ""
+    $authChoice = Read-Host "  请输入选项 [1]"
+    if ($authChoice -eq "") { $authChoice = "1" }
+
+    $onboardAuthArgs = @()
+    switch ($authChoice) {
+        "1" {
+            # Anthropic 官方
+            $onboardAuthArgs += "--auth-choice", "apiKey"
+            Write-Host ""
+            $apiKey = Read-Host "  请输入 Anthropic API Key" -AsSecureString
+            $apiKeyPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                [Runtime.InteropServices.Marshal]::SecureStringToBSTR($apiKey))
+            if ($apiKeyPlain -eq "") {
+                Write-Fail "API Key 不能为空"
+                exit 1
+            }
+            $onboardAuthArgs += "--anthropic-api-key", $apiKeyPlain
+        }
+        "2" {
+            # 自定义端点
+            $onboardAuthArgs += "--auth-choice", "custom-api-key"
+            Write-Host ""
+            $customUrl = Read-Host "  请输入 API Base URL (例: https://openrouter.ai/api/v1)"
+            if ($customUrl -eq "") {
+                Write-Fail "API Base URL 不能为空"
+                exit 1
+            }
+            $apiKey = Read-Host "  请输入 API Key" -AsSecureString
+            $apiKeyPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                [Runtime.InteropServices.Marshal]::SecureStringToBSTR($apiKey))
+            if ($apiKeyPlain -eq "") {
+                Write-Fail "API Key 不能为空"
+                exit 1
+            }
+            $customModel = Read-Host "  请输入模型 ID [claude-sonnet-4-6]"
+            if ($customModel -eq "") { $customModel = "claude-sonnet-4-6" }
+            $customCompat = Read-Host "  API 兼容类型 [openai]"
+            if ($customCompat -eq "") { $customCompat = "openai" }
+            $onboardAuthArgs += "--custom-base-url", $customUrl,
+                "--custom-api-key", $apiKeyPlain,
+                "--custom-model-id", $customModel,
+                "--custom-compatibility", $customCompat
+        }
+        "3" {
+            # Z.AI
+            $onboardAuthArgs += "--auth-choice", "zai-api-key"
+            Write-Host ""
+            $apiKey = Read-Host "  请输入 Z.AI API Key" -AsSecureString
+            $apiKeyPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                [Runtime.InteropServices.Marshal]::SecureStringToBSTR($apiKey))
+            if ($apiKeyPlain -eq "") {
+                Write-Fail "API Key 不能为空"
+                exit 1
+            }
+            $onboardAuthArgs += "--zai-api-key", $apiKeyPlain
+        }
+        default {
+            Write-Fail "无效选项: $authChoice"
+            exit 1
+        }
+    }
+
+    # --- 安装为系统服务 ---
+    Write-Host ""
+    $installDaemon = Read-Host "  是否将 Gateway 安装为系统服务 (开机自启)? [Y/n]"
+    $daemonArgs = @()
+    if ($installDaemon -ne "n" -and $installDaemon -ne "N") {
+        $daemonArgs += "--install-daemon"
+    }
+
+    # --- 执行 onboard ---
+    Write-Host ""
+    Write-Info "正在执行 OpenClaw 初始化..."
+    Write-Info "（跳过消息渠道配对和技能安装，可稍后通过 openclaw onboard 补充配置）"
+    Write-Host ""
+
+    $allArgs = @(
+        "onboard",
+        "--non-interactive",
+        "--flow", "quickstart"
+    ) + $onboardAuthArgs + @(
+        "--skip-channels",
+        "--skip-skills",
+        "--accept-risk",
+        "--workspace", $WorkspacePath
+    ) + $daemonArgs
+
+    try {
+        & openclaw @allArgs
+        Write-OK "OpenClaw 初始化完成"
+    } catch {
+        Write-Fail "OpenClaw 初始化失败"
+        Write-Host ""
+        Write-Host "  可能原因:"
+        Write-Host "    · API Key 无效或过期"
+        Write-Host "    · 网络连接问题"
+        Write-Host "    · OpenClaw CLI 版本过旧 (尝试: npm update -g openclaw)"
+        Write-Host ""
+        Write-Host "  你可以手动执行: openclaw onboard"
+        Write-Host "  完成后重新运行本安装脚本"
+        exit 1
+    }
+
+    # 验证 onboard 成功
+    if (Test-Path $soulFile) {
+        Write-OK "工作区文件验证通过 (SOUL.md 已创建)"
+    } else {
+        Write-Warn "onboard 已执行但未检测到 SOUL.md，可能需要手动检查"
+    }
+}
+
 # ── 备份已有工作区 ────────────────────────────────────────────
-Write-Head "📦 Step 2/7 — 备份检查"
+Write-Head "📦 Step 3/8 — 备份检查"
 
 if (Test-Path $WorkspacePath) {
     $items = Get-ChildItem $WorkspacePath -Force 2>$null
@@ -110,7 +251,7 @@ if (Test-Path $WorkspacePath) {
 }
 
 # ── 创建目录结构 ──────────────────────────────────────────────
-Write-Head "📁 Step 3/7 — 创建目录结构"
+Write-Head "📁 Step 4/8 — 创建目录结构"
 
 $dirs = @("memory", "skills", "snapshots", ".learnings", "scripts")
 foreach ($d in $dirs) {
@@ -120,7 +261,7 @@ foreach ($d in $dirs) {
 Write-OK "目录结构就绪"
 
 # ── 复制配置文件 ──────────────────────────────────────────────
-Write-Head "📝 Step 4/7 — 复制配置文件"
+Write-Head "📝 Step 5/8 — 复制配置文件"
 
 # --- 策略 1: 追加补丁（保留默认内容，追加扩展）---
 foreach ($pf in @("AGENTS", "TOOLS")) {
@@ -195,7 +336,7 @@ if (-not (Test-Path $logFile)) {
 }
 
 # ── 安装 ClawdHub CLI ─────────────────────────────────────────
-Write-Head "🔧 Step 5/7 — ClawdHub CLI"
+Write-Head "🔧 Step 6/8 — ClawdHub CLI"
 
 try {
     & clawdhub --version 2>$null | Out-Null
@@ -211,7 +352,7 @@ try {
 }
 
 # ── 工具权限配置 ──────────────────────────────────────────────
-Write-Head "🔑 Step 6/7 — 工具权限"
+Write-Head "🔑 Step 7/8 — 工具权限"
 
 if ($hasOpenClaw) {
     $setupTools = Read-Host "是否配置工具权限（推荐首次使用）? [Y/n]"
@@ -263,7 +404,7 @@ if ($hasOpenClaw) {
 }
 
 # ── 配置定时任务 ──────────────────────────────────────────────
-Write-Head "⏰ Step 7/7 — 定时任务"
+Write-Head "⏰ Step 8/8 — 定时任务"
 
 if ($hasOpenClaw) {
     # 检查 Gateway 是否在线
