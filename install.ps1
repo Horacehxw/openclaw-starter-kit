@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # install.ps1 — OpenClaw Starter Kit 安装脚本 (Windows 原生)
 # 适用于: Windows 10/11 (PowerShell 5.1+)
 # 用法:   powershell -ExecutionPolicy Bypass -File install.ps1
