@@ -191,6 +191,34 @@ if ($onboardNeeded) {
         $daemonArgs += "--install-daemon"
     }
 
+    # --- 清理可能残留的旧 Gateway（避免端口冲突和 nameconflict）---
+    # 1. 尝试用 openclaw CLI 停止
+    try { & openclaw gateway stop 2>$null } catch {}
+
+    # 2. 检查并停止 Windows 服务（--install-daemon 会注册服务，仅杀进程不够，服务管理器会自动重启）
+    $gwService = Get-Service -Name "*openclaw*gateway*" -ErrorAction SilentlyContinue
+    if ($gwService) {
+        Write-Warn "检测到 Gateway Windows 服务 ($($gwService.Name))，正在停止..."
+        Stop-Service -Name $gwService.Name -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+    }
+
+    # 3. 释放 18789 端口（兜底）
+    $staleProc = $null
+    try {
+        $staleProc = Get-NetTCPConnection -LocalPort 18789 -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -First 1
+    } catch {
+        # Fallback: netstat（兼容更老的 Windows）
+        $netstat = & netstat -ano 2>$null | Select-String ":18789 "
+        if ($netstat) { $staleProc = ($netstat -split '\s+')[-1] }
+    }
+    if ($staleProc -and $staleProc -ne "0") {
+        Write-Warn "端口 18789 被占用 (PID: $staleProc)，尝试释放..."
+        Stop-Process -Id $staleProc -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+    }
+
     # --- 执行 onboard ---
     Write-Host ""
     Write-Info "正在执行 OpenClaw 初始化..."
@@ -224,11 +252,38 @@ if ($onboardNeeded) {
         exit 1
     }
 
-    # 验证 onboard 成功
+    # 验证 + 显示 Dashboard URL
     if (Test-Path $soulFile) {
         Write-OK "工作区文件验证通过 (SOUL.md 已创建)"
     } else {
         Write-Warn "onboard 已执行但未检测到 SOUL.md，可能需要手动检查"
+    }
+
+    # 等待 Gateway 启动（daemon 模式需要几秒）
+    if ($daemonArgs.Count -gt 0) {
+        Write-Info "Gateway 服务启动中..."
+        Start-Sleep -Seconds 5
+    }
+
+    # 显示带 token 的 Dashboard URL
+    $dashOk = $false
+    for ($i = 0; $i -lt 3; $i++) {
+        try {
+            $dashOutput = & openclaw dashboard --no-open 2>&1
+            if ($dashOutput -and $dashOutput -match "http") {
+                Write-Host ""
+                Write-OK "Gateway Dashboard 链接:"
+                Write-Host "    $dashOutput" -ForegroundColor Cyan
+                Write-Host ""
+                Write-Info "在浏览器中打开此链接即可访问 Agent 控制台"
+                $dashOk = $true
+                break
+            }
+        } catch {}
+        Start-Sleep -Seconds 3
+    }
+    if (-not $dashOk) {
+        Write-Warn "Dashboard URL 暂时不可用，请稍后运行: openclaw dashboard --no-open"
     }
 }
 
@@ -449,8 +504,9 @@ Write-Host "  📁 工作区: $WorkspacePath"
 Write-Host ""
 Write-Host "  📋 下一步:"
 Write-Host "     1. 启动 Gateway:  openclaw gateway start"
-Write-Host "     2. 在 IM 中发送: 「让我们来设置一下吧」"
-Write-Host "     3. 按照引导完成初始化 (约 2 分钟)"
+Write-Host "     2. 获取 Dashboard 链接: openclaw dashboard --no-open"
+Write-Host "     3. 在 IM 中发送: 「让我们来设置一下吧」"
+Write-Host "     4. 按照引导完成初始化 (约 2 分钟)"
 Write-Host ""
 Write-Host "  💡 Windows 提示:" -ForegroundColor Yellow
 Write-Host "     · Gateway 推荐在 PowerShell 中前台运行，或注册为 Windows 服务"

@@ -97,6 +97,8 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -WorkspacePath "D:\my-agent
 
 > ⚠️ 本配置包只操作 `~/.openclaw/workspace/` 目录（.md 文件和 skills），**不会覆盖** `openclaw.json` 中的模型、频道、插件等配置。如果尚未完成 `openclaw onboard`，安装脚本会自动引导你完成初始化。
 
+**访问 Dashboard**：安装完成后，脚本会显示 Gateway Dashboard URL（`http://127.0.0.1:18789/?token=xxx`）。在浏览器中打开即可访问 Agent 控制台。随时可通过 `openclaw dashboard --no-open` 获取链接。
+
 安装完成后，按顺序执行：
 
 ```bash
