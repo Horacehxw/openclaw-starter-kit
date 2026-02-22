@@ -98,6 +98,8 @@ Regardless of platform, the script performs 8 steps:
 
 > ⚠️ This configuration pack only operates on the `~/.openclaw/workspace/` directory (.md files and skills). It **does not overwrite** model, channel, plugin, or other settings in `openclaw.json`. If you haven't completed `openclaw onboard` yet, the install script will guide you through it automatically.
 
+**Access the Dashboard**: After installation, the script displays the Gateway Dashboard URL (`http://127.0.0.1:18789/?token=xxx`). Open it in your browser. Retrieve it anytime with `openclaw dashboard --no-open`.
+
 After installation, execute in order:
 
 ```bash

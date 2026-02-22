@@ -194,6 +194,35 @@ if [ "$ONBOARD_NEEDED" = true ]; then
         DAEMON_FLAG="--install-daemon"
     fi
 
+    # --- 清理可能残留的旧 Gateway（避免端口冲突和 nameconflict）---
+    if command -v openclaw &>/dev/null; then
+        openclaw gateway stop 2>/dev/null || true
+    fi
+
+    # Linux/WSL: 停止 systemd 服务（避免 nameconflict）
+    if [[ "$OS" != "macos" ]] && command -v systemctl &>/dev/null; then
+        if systemctl --user is-active openclaw-gateway.service &>/dev/null; then
+            warn "检测到运行中的 openclaw-gateway systemd 服务，正在停止..."
+            systemctl --user stop openclaw-gateway 2>/dev/null || true
+            sleep 2
+        fi
+    fi
+
+    # 释放 18789 端口（兜底，lsof → ss → netstat 三级 fallback）
+    STALE_PID=""
+    if command -v lsof &>/dev/null; then
+        STALE_PID=$(lsof -ti:18789 2>/dev/null)
+    elif command -v ss &>/dev/null; then
+        STALE_PID=$(ss -tlnp 2>/dev/null | grep ":18789 " | sed 's/.*pid=\([0-9]*\).*/\1/')
+    elif command -v netstat &>/dev/null; then
+        STALE_PID=$(netstat -tlnp 2>/dev/null | grep ":18789 " | awk '{print $NF}' | cut -d'/' -f1)
+    fi
+    if [ -n "$STALE_PID" ] && [ "$STALE_PID" != "-" ]; then
+        warn "端口 18789 被占用 (PID: $STALE_PID)，尝试释放..."
+        kill "$STALE_PID" 2>/dev/null || true
+        sleep 2
+    fi
+
     # --- 执行 onboard ---
     echo ""
     info "正在执行 OpenClaw 初始化..."
@@ -225,11 +254,36 @@ if [ "$ONBOARD_NEEDED" = true ]; then
         exit 1
     }
 
-    # 验证 onboard 成功
+    # 验证 + 显示 Dashboard URL
     if [ -f "$WORKSPACE/SOUL.md" ]; then
         ok "工作区文件验证通过 (SOUL.md 已创建)"
     else
         warn "onboard 已执行但未检测到 SOUL.md，可能需要手动检查"
+    fi
+
+    # 等待 Gateway 启动
+    if [ -n "$DAEMON_FLAG" ]; then
+        info "Gateway 服务启动中..."
+        sleep 5
+    fi
+
+    # 显示带 token 的 Dashboard URL（最多重试 3 次）
+    DASH_OK=false
+    for i in 1 2 3; do
+        DASH_OUTPUT=$(openclaw dashboard --no-open 2>/dev/null)
+        if [ -n "$DASH_OUTPUT" ] && echo "$DASH_OUTPUT" | grep -q "http"; then
+            echo ""
+            ok "Gateway Dashboard 链接:"
+            echo -e "    ${CYAN}${DASH_OUTPUT}${NC}"
+            echo ""
+            info "在浏览器中打开此链接即可访问 Agent 控制台"
+            DASH_OK=true
+            break
+        fi
+        sleep 3
+    done
+    if [ "$DASH_OK" = false ]; then
+        warn "Dashboard URL 暂时不可用，请稍后运行: openclaw dashboard --no-open"
     fi
 fi
 
@@ -457,9 +511,10 @@ echo "  📁 工作区: $WORKSPACE"
 echo ""
 echo "  📋 下一步:"
 echo "     1. 确认 Gateway 在运行:  systemctl --user status openclaw-gateway"
-echo "     2. 配置定时任务:         bash $WORKSPACE/scripts/setup-cron.sh"
-echo "     3. 在 IM 中发送:         「让我们来设置一下吧」"
-echo "     4. 按照引导完成初始化 (约 2 分钟)"
+echo "     2. 获取 Dashboard 链接:  openclaw dashboard --no-open"
+echo "     3. 配置定时任务:         bash $WORKSPACE/scripts/setup-cron.sh"
+echo "     4. 在 IM 中发送:         「让我们来设置一下吧」"
+echo "     5. 按照引导完成初始化 (约 2 分钟)"
 echo ""
 
 case $OS in
