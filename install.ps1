@@ -252,6 +252,26 @@ if ($onboardNeeded) {
         exit 1
     }
 
+    # 自定义 API 端点: 补充 contextWindow / maxTokens（onboard 默认值可能缺失）
+    if ($authChoice -eq "2") {
+        $openclawJson = Join-Path $env:USERPROFILE ".openclaw\openclaw.json"
+        if (Test-Path $openclawJson) {
+            try {
+                $cfg = Get-Content $openclawJson -Raw | ConvertFrom-Json
+                foreach ($prov in $cfg.models.providers.PSObject.Properties) {
+                    foreach ($m in $prov.Value.models) {
+                        $m.contextWindow = 200000
+                        $m.maxTokens = 128000
+                    }
+                }
+                $cfg | ConvertTo-Json -Depth 20 | Set-Content $openclawJson -Encoding UTF8
+                Write-OK "模型参数: contextWindow=200000, maxTokens=128000"
+            } catch {
+                Write-Warn "模型参数配置失败，请手动编辑 openclaw.json"
+            }
+        }
+    }
+
     # 验证 + 显示 Dashboard URL
     if (Test-Path $soulFile) {
         Write-OK "工作区文件验证通过 (SOUL.md 已创建)"
@@ -413,10 +433,16 @@ if ($hasOpenClaw) {
     $setupTools = Read-Host "是否配置工具权限（推荐首次使用）? [Y/n]"
     if ($setupTools -ne "n" -and $setupTools -ne "N") {
         Write-Info "配置工具策略..."
+        # openclaw config set 会向 stderr 输出 "Config overwrite: ..." 信息，
+        # 在 $ErrorActionPreference = "Stop" 下会被 PowerShell 当作 NativeCommandError 终止脚本。
+        # 临时降低 ErrorActionPreference 以避免此问题。
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
         & openclaw config set tools.profile '"full"' 2>$null
         & openclaw config set tools.deny '["sessions_spawn", "sessions_send"]' 2>$null
         & openclaw config set tools.fs.workspaceOnly true 2>$null
         & openclaw config set tools.elevated.enabled false 2>$null
+        $ErrorActionPreference = $prevEAP
         Write-OK "工具策略配置完成"
 
         # Browser: headless Chromium (可选)
