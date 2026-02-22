@@ -254,6 +254,26 @@ if [ "$ONBOARD_NEEDED" = true ]; then
         exit 1
     }
 
+    # 自定义 API 端点: 补充 contextWindow / maxTokens（onboard 默认值可能缺失）
+    if [ "$auth_choice" = "2" ]; then
+        OPENCLAW_JSON="$HOME/.openclaw/openclaw.json"
+        if [ -f "$OPENCLAW_JSON" ]; then
+            python3 -c "
+import json
+with open('$OPENCLAW_JSON') as f:
+    cfg = json.load(f)
+providers = cfg.get('models', {}).get('providers', {})
+for pid, prov in providers.items():
+    for m in prov.get('models', []):
+        m['contextWindow'] = 200000
+        m['maxTokens'] = 128000
+with open('$OPENCLAW_JSON', 'w') as f:
+    json.dump(cfg, f, indent=2, ensure_ascii=False)
+" && ok "模型参数: contextWindow=200000, maxTokens=128000" \
+              || warn "模型参数配置失败，请手动编辑 openclaw.json"
+        fi
+    fi
+
     # 验证 + 显示 Dashboard URL
     if [ -f "$WORKSPACE/SOUL.md" ]; then
         ok "工作区文件验证通过 (SOUL.md 已创建)"
