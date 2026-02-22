@@ -15,7 +15,7 @@
 
 安装策略：只在 AGENTS.md 和 TOOLS.md 末尾**追加**少量扩展段落（指向新功能），其余全部是新建文件和目录。不修改 SOUL.md、IDENTITY.md、USER.md、HEARTBEAT.md、BOOTSTRAP.md。
 
-**前置条件**：已完成 `openclaw onboard`（模型配置 + 频道配对）。
+**前置条件**：Node.js + npm。安装脚本可自动完成 `openclaw onboard` 初始化（交互式配置 API Key，渠道可稍后配置）。
 
 **支持平台**：Linux / WSL2 / macOS / Windows
 
@@ -78,23 +78,24 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -WorkspacePath "D:\my-agent
 
 ### 安装脚本做了什么
 
-无论哪个平台，脚本都执行 7 步：
+无论哪个平台，脚本都执行 8 步：
 
-1. **前置检查** — 检测 Node.js、npm、OpenClaw
-2. **备份** — 已有工作区自动备份
-3. **建目录** — 创建 memory/、skills/、snapshots/ 等
-4. **复制文件** — 追加补丁到 AGENTS/TOOLS + 新建 BOOT.md、MEMORY.md 等缺失文件
-5. **装 CLI** — 安装 ClawdHub CLI
-6. **工具权限** — 工具策略 + 命令白名单 + headless 浏览器（详见[附录 C](#附录-c工具权限详解)）
-7. **配 Cron** — 可选配置定时任务（详见[附录 D](#附录-d定时任务详解)）
+1. **前置检查** — 检测 Node.js、npm、OpenClaw（未安装可自动安装）
+2. **环境引导** — 检测 `openclaw onboard` 是否完成；未完成则引导配置 API 提供商、API Key，自动执行 `openclaw onboard --non-interactive`（跳过渠道配对，可稍后配置）
+3. **备份** — 已有工作区自动备份
+4. **建目录** — 创建 memory/、skills/、snapshots/ 等
+5. **复制文件** — 追加补丁到 AGENTS/TOOLS + 新建 BOOT.md、MEMORY.md 等缺失文件
+6. **装 CLI** — 安装 ClawdHub CLI
+7. **工具权限** — 工具策略 + 命令白名单 + headless 浏览器（详见[附录 C](#附录-c工具权限详解)）
+8. **配 Cron** — 可选配置定时任务（详见[附录 D](#附录-d定时任务详解)）
 
-> Step 6 增量写入 `openclaw.json`，不覆盖模型/频道等配置。Step 7 需要 Gateway 在线。
+> Step 2 若已完成 onboard（检测到 SOUL.md）则自动跳过。Step 7 增量写入 `openclaw.json`，不覆盖模型/频道等配置。Step 8 需要 Gateway 在线。
 
 ---
 
 ## 🏁 首次使用流程
 
-> ⚠️ 本配置包只操作 `~/.openclaw/workspace/` 目录（.md 文件和 skills），**不会覆盖** `openclaw.json` 中的模型、频道、插件等配置。请在完成 OpenClaw 基础部署（onboard + 模型 + 频道配对）之后再使用本配置包。
+> ⚠️ 本配置包只操作 `~/.openclaw/workspace/` 目录（.md 文件和 skills），**不会覆盖** `openclaw.json` 中的模型、频道、插件等配置。如果尚未完成 `openclaw onboard`，安装脚本会自动引导你完成初始化。
 
 安装完成后，按顺序执行：
 

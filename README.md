@@ -15,7 +15,7 @@ An incremental extension pack on top of `openclaw onboard` defaults. The default
 
 Installation strategy: Only **appends** small extension paragraphs to the end of AGENTS.md and TOOLS.md (pointing to new features). Everything else is new files and directories. Does not modify SOUL.md, IDENTITY.md, USER.md, HEARTBEAT.md, or BOOTSTRAP.md.
 
-**Prerequisites**: Completed `openclaw onboard` (model configuration + channel pairing).
+**Prerequisites**: Node.js + npm. The install script can automatically run `openclaw onboard` if not yet completed (interactive API key setup, channels can be configured later).
 
 **Supported Platforms**: Linux / WSL2 / macOS / Windows
 
@@ -78,23 +78,24 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -WorkspacePath "D:\my-agent
 
 ### What the Install Script Does
 
-Regardless of platform, the script performs 7 steps:
+Regardless of platform, the script performs 8 steps:
 
-1. **Prerequisite Check** — Detects Node.js, npm, OpenClaw
-2. **Backup** — Automatically backs up existing workspace
-3. **Create Directories** — Creates memory/, skills/, snapshots/, etc.
-4. **Copy Files** — Appends patches to AGENTS/TOOLS + creates missing files like BOOT.md, MEMORY.md
-5. **Install CLI** — Installs ClawdHub CLI
-6. **Tool Permissions** — Tool policy + command allowlist + headless browser (see [Appendix C](#appendix-c-tool-permissions))
-7. **Configure Cron** — Optional scheduled task setup (see [Appendix D](#appendix-d-scheduled-tasks))
+1. **Prerequisite Check** — Detects Node.js, npm, OpenClaw (auto-installs if missing)
+2. **OpenClaw Onboard** — Detects if `openclaw onboard` has been completed; if not, guides you through API provider selection, API key input, and runs `openclaw onboard --non-interactive` (channels skipped, configurable later)
+3. **Backup** — Automatically backs up existing workspace
+4. **Create Directories** — Creates memory/, skills/, snapshots/, etc.
+5. **Copy Files** — Appends patches to AGENTS/TOOLS + creates missing files like BOOT.md, MEMORY.md
+6. **Install CLI** — Installs ClawdHub CLI
+7. **Tool Permissions** — Tool policy + command allowlist + headless browser (see [Appendix C](#appendix-c-tool-permissions))
+8. **Configure Cron** — Optional scheduled task setup (see [Appendix D](#appendix-d-scheduled-tasks))
 
-> Step 6 incrementally writes to `openclaw.json` without overwriting model/channel configs. Step 7 requires the Gateway to be online.
+> Step 2 is skipped if onboard is already completed (detected via SOUL.md existence). Step 7 incrementally writes to `openclaw.json` without overwriting model/channel configs. Step 8 requires the Gateway to be online.
 
 ---
 
 ## 🏁 First-Time Usage
 
-> ⚠️ This configuration pack only operates on the `~/.openclaw/workspace/` directory (.md files and skills). It **does not overwrite** model, channel, plugin, or other settings in `openclaw.json`. Please use this pack after completing your OpenClaw base deployment (onboard + model + channel pairing).
+> ⚠️ This configuration pack only operates on the `~/.openclaw/workspace/` directory (.md files and skills). It **does not overwrite** model, channel, plugin, or other settings in `openclaw.json`. If you haven't completed `openclaw onboard` yet, the install script will guide you through it automatically.
 
 After installation, execute in order:
 
